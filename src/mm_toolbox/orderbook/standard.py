@@ -1,5 +1,5 @@
 import numpy as np
-from numba.types import int32, float64, bool_
+from numba.types import int32, float64, bool_, int64
 from numba.experimental import jitclass
 from typing import Tuple
 
@@ -17,7 +17,7 @@ class Orderbook:
     size: int32
 
     _warmed_up: bool_
-    _seq_id: int32
+    _seq_id: int64
     _asks: float64[:, :]
     _bids: float64[:, :]
 
@@ -124,8 +124,11 @@ class Orderbook:
         # Reset attributes and internal arrays.
         self._warmed_up = False
         self._seq_id = 0
-        self._asks.fill(0.0)
-        self._bids.fill(0.0)
+
+        # Remove the optimized .fill method with reinting zeros. 
+        # Broadcasting fails when _bid/_asks length change on book updates 
+        self._asks: np.ndarray = np.zeros((self.size, 2), dtype=np.float64)
+        self._bids: np.ndarray = np.zeros((self.size, 2), dtype=np.float64)
 
         # Prefer to broadcast onto internal arrays, not overwrite.
         # We also assume that they come in without any overlapping bids/asks,
